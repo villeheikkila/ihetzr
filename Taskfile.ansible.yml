@@ -1,0 +1,6 @@
+version: "3"
+
+tasks:
+  apply:
+    cmds:
+      - ansible-playbook -i ansible/inventory.ini ansible/playbook.yml --ask-vault-pass

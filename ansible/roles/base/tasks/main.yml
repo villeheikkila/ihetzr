@@ -90,3 +90,6 @@
     content: "{{ item }} ALL=(ALL) NOPASSWD:ALL"
   loop: "{{ ssh_allow_users }}"
   notify: Reload sudo
+
+- name: Drift check
+  ansible.builtin.include_tasks: drift.yml

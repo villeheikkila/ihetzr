@@ -1,0 +1,9 @@
+version: "3"
+
+tasks:
+  up:
+    cmds:
+      - pulumi up
+  destroy:
+    cmds:
+      - pulumi destroy

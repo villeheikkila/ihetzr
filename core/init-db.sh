@@ -2,7 +2,7 @@
 set -eu
 
 # Create per-service databases and users using POSTGRES_DB_* env vars.
-# Example: POSTGRES_DB_MAKU_NAME=maku POSTGRES_DB_MAKU_USER=maku POSTGRES_DB_MAKU_PASSWORD=secret
+# Example: POSTGRES_DB_APP_NAME=app POSTGRES_DB_APP_USER=app POSTGRES_DB_APP_PASSWORD=secret
 
 for var in $(env | cut -d= -f1 | grep '^POSTGRES_DB_.*_NAME$' || true); do
   key=$(echo "$var" | sed 's/^POSTGRES_DB_//;s/_NAME$//')

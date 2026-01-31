@@ -20,6 +20,13 @@ ansible-vault create group_vars/vps.secrets.yml
 ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass
 ```
 
+## Tasks
+
+```bash
+task pulumi:up
+task ansible:apply
+```
+
 ## Pulumi config
 
 Required:

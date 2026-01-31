@@ -1,14 +1,8 @@
 # ihetzr Ansible
 
-This playbook replaces cloud-init for ongoing management. Cloud-init only creates
-an SSH user and disables root/password auth. Ansible handles Docker, Caddy, core
-services, pgBackRest timers, and hardening.
-
 ## Usage
 
 ```bash
-cd /Users/villeheikkila/Developer/ihetzr/ansible
-
 # Add your server IP in inventory.ini
 ansible-vault create group_vars/vps.secrets.yml
 ansible-playbook -i inventory.ini playbook.yml

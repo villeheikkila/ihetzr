@@ -1,0 +1,19 @@
+- name: Check Caddy sites directory
+  ansible.builtin.stat:
+    path: /etc/caddy/sites
+  register: caddy_sites_dir
+
+- name: Warn about unmanaged Caddy site files
+  ansible.builtin.command: ls -1 /etc/caddy/sites
+  register: caddy_sites_ls
+  changed_when: false
+  when: caddy_sites_dir.stat.exists
+
+- name: Show unmanaged Caddy files
+  ansible.builtin.debug:
+    msg: "Unmanaged Caddy file: {{ item }}"
+  loop: "{{ caddy_sites_ls.stdout_lines | default([]) }}"
+  when:
+    - caddy_sites_dir.stat.exists
+    - item != "README.md"
+    - item not in (caddy_sites | default([]) | map(attribute='name') | list | map('regex_replace', '$', '.caddy') | list)

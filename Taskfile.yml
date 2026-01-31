@@ -1,0 +1,14 @@
+version: "3"
+
+vars:
+  ANSIBLE_DIR: ansible
+
+includes:
+  pulumi:
+    taskfile: ./Taskfile.pulumi.yml
+    dir: .
+
+  ansible:
+    taskfile: ./Taskfile.ansible.yml
+    dir: .
+
