@@ -1,0 +1,8 @@
+[Unit]
+Description=pgBackRest incremental backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/docker exec ihetzr-pg pgbackrest --stanza=main --type=incr backup

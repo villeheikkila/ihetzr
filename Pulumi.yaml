@@ -1,0 +1,5 @@
+name: ihetzr
+runtime: nodejs
+main: index.ts
+
+description: Hetzner Cloud + DNS infrastructure

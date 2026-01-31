@@ -1,0 +1,68 @@
+- name: Add Caddy GPG key
+  ansible.builtin.apt_key:
+    url: https://dl.cloudsmith.io/public/caddy/stable/gpg.key
+    state: present
+
+- name: Add Caddy repo
+  ansible.builtin.apt_repository:
+    repo: "deb https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt stable main"
+    state: present
+
+- name: Install Caddy
+  ansible.builtin.apt:
+    name: caddy
+    update_cache: true
+    state: present
+
+- name: Ensure Caddy config directory
+  ansible.builtin.file:
+    path: /etc/caddy/sites
+    state: directory
+    mode: "0755"
+
+- name: Deploy Caddyfile
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../caddy/Caddyfile"
+    dest: /etc/caddy/Caddyfile
+    mode: "0644"
+
+- name: Ensure empty sites placeholder
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../caddy/sites/README.md"
+    dest: /etc/caddy/sites/README.md
+    mode: "0644"
+
+- name: Render Caddy sites
+  ansible.builtin.template:
+    src: site.caddy.j2
+    dest: "/etc/caddy/sites/{{ item.name }}.caddy"
+    mode: "0644"
+  loop: "{{ caddy_sites | default([]) }}"
+
+- name: Find managed Caddy sites
+  ansible.builtin.find:
+    paths: /etc/caddy/sites
+    patterns: "*.caddy"
+  register: caddy_site_files
+
+- name: Build allowed Caddy site filenames
+  ansible.builtin.set_fact:
+    caddy_site_allowed_files: >-
+      {{
+        (caddy_sites | default([]) | map(attribute='name') | list)
+        | map('regex_replace', '$', '.caddy')
+        | list
+      }}
+
+- name: Remove unmanaged Caddy sites
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ caddy_site_files.files }}"
+  when: (item.path | basename) not in caddy_site_allowed_files
+
+- name: Enable Caddy
+  ansible.builtin.systemd:
+    name: caddy
+    enabled: true
+    state: restarted

@@ -1,0 +1,92 @@
+- name: Ensure base packages are installed
+  ansible.builtin.apt:
+    name:
+      - ufw
+      - fail2ban
+      - unattended-upgrades
+      - python3
+      - python3-apt
+    update_cache: true
+    state: present
+
+- name: Ensure SSH hardening config
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/01-ihetzr.conf
+    mode: "0644"
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      PubkeyAuthentication yes
+      PermitEmptyPasswords no
+      MaxAuthTries 3
+      LoginGraceTime 30
+      AllowUsers {{ ssh_allow_users | join(' ') }}
+  notify: Reload sshd
+
+- name: Allow SSH
+  ansible.builtin.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+
+- name: Allow HTTP
+  ansible.builtin.ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+
+- name: Allow HTTPS
+  ansible.builtin.ufw:
+    rule: allow
+    port: "443"
+    proto: tcp
+
+- name: Enable UFW
+  ansible.builtin.ufw:
+    state: enabled
+    policy: deny
+
+- name: Allow outgoing by default
+  ansible.builtin.ufw:
+    direction: outgoing
+    policy: allow
+
+- name: Enable fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: true
+    state: started
+
+- name: Ensure sshd jail is enabled
+  ansible.builtin.copy:
+    dest: /etc/fail2ban/jail.d/sshd.local
+    mode: "0644"
+    content: |
+      [sshd]
+      enabled = true
+      maxretry = 5
+      findtime = 10m
+      bantime = 1h
+  notify: Restart fail2ban
+
+- name: Enable unattended-upgrades
+  ansible.builtin.systemd:
+    name: unattended-upgrades
+    enabled: true
+    state: started
+
+- name: Ensure SSH users exist
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: sudo
+    append: true
+    shell: /bin/bash
+  loop: "{{ ssh_allow_users }}"
+
+- name: Ensure sudoers for SSH users
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/{{ item }}"
+    mode: "0440"
+    content: "{{ item }} ALL=(ALL) NOPASSWD:ALL"
+  loop: "{{ ssh_allow_users }}"
+  notify: Reload sudo

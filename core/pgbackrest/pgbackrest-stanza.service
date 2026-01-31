@@ -1,0 +1,8 @@
+[Unit]
+Description=pgBackRest stanza init
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash -lc 'for i in $(seq 1 30); do docker exec ihetzr-pg pg_isready -U postgres -d postgres && break; sleep 2; done; docker exec ihetzr-pg pgbackrest --stanza=main stanza-create'

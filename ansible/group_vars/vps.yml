@@ -1,0 +1,41 @@
+ansible_user: deploy
+
+# SSH hardening
+ssh_allow_users:
+  - deploy
+
+# Caddy
+caddy_email: admin@example.com
+
+# Core paths
+core_root: /srv/services/core
+caddy_root: /srv/services/caddy
+
+# GHCR (optional)
+ghcr_login: false
+ghcr_username: ""
+ghcr_token: ""
+
+# pgBackRest S3
+pgbackrest_s3_bucket: ihetzr-backups
+pgbackrest_s3_endpoint: hel1.your-objectstorage.com
+pgbackrest_s3_region: hel1
+pgbackrest_repo_path: /ihetzr
+
+# Service databases
+postgres_databases: []
+
+# Postgres tuning
+postgres_shared_buffers: 8GB
+postgres_effective_cache_size: 24GB
+postgres_work_mem: 16MB
+postgres_maintenance_work_mem: 1GB
+postgres_max_connections: 100
+postgres_max_wal_size: 4GB
+postgres_min_wal_size: 1GB
+postgres_checkpoint_timeout: 15min
+postgres_checkpoint_completion_target: 0.9
+postgres_random_page_cost: 1.1
+
+# Caddy sites (can be defined in vault instead)
+caddy_sites: []

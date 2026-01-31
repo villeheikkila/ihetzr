@@ -1,0 +1,101 @@
+services:
+  db:
+    image: ghcr.io/villeheikkila/ihetzr-pg:latest
+    container_name: ihetzr-pg
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+    env_file:
+      - ./db.env
+      - ./pgbackrest/pgbackrest.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/01-init-db.sh:ro
+      - ./pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+    command:
+      - postgres
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=pgbackrest --stanza=main archive-push %p
+      - -c
+      - shared_buffers=8GB
+      - -c
+      - effective_cache_size=24GB
+      - -c
+      - work_mem=16MB
+      - -c
+      - maintenance_work_mem=1GB
+      - -c
+      - max_connections=100
+      - -c
+      - max_wal_size=4GB
+      - -c
+      - min_wal_size=1GB
+      - -c
+      - checkpoint_timeout=15min
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - shared_preload_libraries=pg_cron
+      - -c
+      - cron.database_name=postgres
+      - -c
+      - wal_level=replica
+      - -c
+      - max_wal_senders=3
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8.4.0-alpine
+    container_name: ihetzr-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    env_file:
+      - ./redis.env
+    command: >
+      sh -c "sed \
+      -e 's/__REDIS_USERNAME__/'\"$REDIS_USERNAME\"'/g' \
+      -e 's/__REDIS_PASSWORD__/'\"$REDIS_PASSWORD\"'/g' \
+      /usr/local/etc/redis/redis.conf.template > /tmp/redis.conf \
+      && redis-server /tmp/redis.conf"
+    volumes:
+      - redis_data:/data
+      - ./redis.conf.template:/usr/local/etc/redis/redis.conf.template:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  caddy:
+    image: caddy:2.9.1-alpine
+    container_name: ihetzr-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CADDY_EMAIL: ${CADDY_EMAIL:-admin@example.com}
+    volumes:
+      - ../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../caddy/sites:/etc/caddy/sites:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:

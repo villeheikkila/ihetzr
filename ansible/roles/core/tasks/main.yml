@@ -1,0 +1,93 @@
+- name: Ensure core directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ core_root }}"
+    - "{{ core_root }}/db"
+    - "{{ core_root }}/pgbackrest"
+
+- name: Copy core compose
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../core/docker-compose.yml"
+    dest: "{{ core_root }}/docker-compose.yml"
+    mode: "0644"
+
+- name: Copy core init-db
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../core/init-db.sh"
+    dest: "{{ core_root }}/init-db.sh"
+    mode: "0755"
+
+- name: Copy redis template
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../core/redis.conf.template"
+    dest: "{{ core_root }}/redis.conf.template"
+    mode: "0644"
+
+- name: Template redis env
+  ansible.builtin.template:
+    src: redis.env.j2
+    dest: "{{ core_root }}/redis.env"
+    mode: "0600"
+
+- name: Template db env
+  ansible.builtin.template:
+    src: db.env.j2
+    dest: "{{ core_root }}/db.env"
+    mode: "0600"
+
+- name: Copy DB Dockerfile
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../core/db/Dockerfile"
+    dest: "{{ core_root }}/db/Dockerfile"
+    mode: "0644"
+
+- name: Template pgBackRest config
+  ansible.builtin.template:
+    src: pgbackrest.conf.j2
+    dest: "{{ core_root }}/pgbackrest/pgbackrest.conf"
+    mode: "0644"
+
+- name: Template pgBackRest env
+  ansible.builtin.template:
+    src: pgbackrest.env.j2
+    dest: "{{ core_root }}/pgbackrest/pgbackrest.env"
+    mode: "0600"
+
+- name: Copy pgBackRest systemd units
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "/etc/systemd/system/{{ item.dest }}"
+    mode: "0644"
+  loop:
+    - { src: "{{ playbook_dir }}/../core/pgbackrest/pgbackrest-full.service", dest: "pgbackrest-full.service" }
+    - { src: "{{ playbook_dir }}/../core/pgbackrest/pgbackrest-full.timer", dest: "pgbackrest-full.timer" }
+    - { src: "{{ playbook_dir }}/../core/pgbackrest/pgbackrest-incr.service", dest: "pgbackrest-incr.service" }
+    - { src: "{{ playbook_dir }}/../core/pgbackrest/pgbackrest-incr.timer", dest: "pgbackrest-incr.timer" }
+    - { src: "{{ playbook_dir }}/../core/pgbackrest/pgbackrest-stanza.service", dest: "pgbackrest-stanza.service" }
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: GHCR login (optional)
+  ansible.builtin.command: >
+    docker login ghcr.io -u {{ ghcr_username }} --password-stdin
+  args:
+    stdin: "{{ ghcr_token }}"
+  when: ghcr_login
+
+- name: Start core services
+  ansible.builtin.command: docker compose -f {{ core_root }}/docker-compose.yml up -d
+
+- name: Enable pgBackRest stanza and timers
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - pgbackrest-stanza.service
+    - pgbackrest-full.timer
+    - pgbackrest-incr.timer
